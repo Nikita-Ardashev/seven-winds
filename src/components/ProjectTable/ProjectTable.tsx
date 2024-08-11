@@ -1,26 +1,20 @@
-import { ITreeResponse } from '@/model/types';
+import { ITree } from '@/model/types';
 import { ProjectTableRow } from '../ProjectTableRow';
 import './ProjectTable.style.sass';
 import { ReactNode } from 'react';
 import React from 'react';
-import { treeRows } from '@/store/treeRows';
+import { EntityTree } from '@/store/treeRows';
 import { observer } from 'mobx-react-lite';
 
 export default function ProjectTable() {
-	const tree = treeRows;
-	const renderRows = (tree: ITreeResponse[], level: number): ReactNode => {
+	const tree = EntityTree;
+	const renderRows = (tree: ITree[], level: number): ReactNode => {
 		const Rows = observer(() =>
-			tree.map((r) => {
+			tree.map((r, i) => {
 				return (
-					<React.Fragment key={`parent-${r.id}`}>
-						<ProjectTableRow
-							level={level}
-							row={r}
-							key={r.id}
-							isNowCreate={r.isNowCreate}
-						/>
-						{r.child.length !== 0 &&
-							renderRows(r.child as ITreeResponse[], level + 1)}
+					<React.Fragment key={`parent-${i}-${r.id}`}>
+						<ProjectTableRow level={level} row={r} key={`${i}-${r.id}`} />
+						{r.child.length !== 0 && renderRows(r.child as ITree[], level + 1)}
 					</React.Fragment>
 				);
 			}),
@@ -39,7 +33,7 @@ export default function ProjectTable() {
 					<th scope="col">Сметная прибыль</th>
 				</tr>
 			</thead>
-			<tbody>{renderRows(tree.getTree, 1)}</tbody>
+			<tbody>{renderRows(tree.getTree, 0)}</tbody>
 		</table>
 	);
 }

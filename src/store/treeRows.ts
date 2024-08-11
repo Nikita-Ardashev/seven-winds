@@ -1,6 +1,6 @@
-import { modelTree } from './modelTreeRows';
+import { modelEntityTree } from './modelTreeRows';
 
-export const treeRows = modelTree.create({
+export const EntityTree = modelEntityTree.create({
 	tree: [],
 	isNowEdited: false,
 });

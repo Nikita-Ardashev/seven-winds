@@ -8,7 +8,7 @@ import ProjectTile from './components/ProjectTile/ProjectTile';
 import { ProjectTable } from './components/ProjectTable';
 import { useEffect } from 'react';
 import { getTreeRows } from './model/api.service';
-import { treeRows } from './store/treeRows';
+import { EntityTree } from './store/treeRows';
 
 // createEntity()
 // 	.then((r) => {
@@ -35,7 +35,7 @@ export const PROJECTS: string[] = [
 ];
 
 export default function App() {
-	const tree = treeRows;
+	const tree = EntityTree;
 	useEffect(() => {
 		getTreeRows()
 			.then((r) => {
