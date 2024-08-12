@@ -3,24 +3,40 @@ import { ProjectTableRow } from '../ProjectTableRow';
 import './ProjectTable.style.sass';
 import { ReactNode } from 'react';
 import React from 'react';
-import { EntityTree } from '@/store/treeRows';
 import { observer } from 'mobx-react-lite';
+import { EntityTree } from '@/store/treeRows';
+import { Instance } from 'mobx-state-tree';
 
-export default function ProjectTable() {
-	const tree = EntityTree;
-	const renderRows = (tree: ITree[], level: number): ReactNode => {
-		const Rows = observer(() =>
-			tree.map((r, i) => {
-				return (
-					<React.Fragment key={`parent-${i}-${r.id}`}>
-						<ProjectTableRow level={level} row={r} key={`${i}-${r.id}`} />
-						{r.child.length !== 0 && renderRows(r.child as ITree[], level + 1)}
-					</React.Fragment>
-				);
-			}),
-		);
-		return <Rows />;
+interface IProjectTableRow {
+	level: number;
+	tree: ITree[];
+	parentIndex: number;
+}
+
+const ProjectTable = observer((props: { entityTree: Instance<typeof EntityTree> }) => {
+	const treeData = props.entityTree;
+	const renderRows = ({ tree, level, parentIndex }: IProjectTableRow): ReactNode => {
+		return tree.map((r, i) => {
+			return (
+				<React.Fragment key={`parent-${i}-${r.id}`}>
+					<ProjectTableRow
+						level={level}
+						row={r}
+						key={`${i}-${r.id}`}
+						childIndex={i}
+						parentIndex={parentIndex}
+					/>
+					{r.child.length !== 0 &&
+						renderRows({
+							tree: r.child,
+							level: level + 1,
+							parentIndex: parentIndex,
+						})}
+				</React.Fragment>
+			);
+		});
 	};
+
 	return (
 		<table className="project-table">
 			<thead>
@@ -33,7 +49,11 @@ export default function ProjectTable() {
 					<th scope="col">Сметная прибыль</th>
 				</tr>
 			</thead>
-			<tbody>{renderRows(tree.getTree, 0)}</tbody>
+			<tbody>
+				{renderRows({ tree: treeData.getTree, level: 0, parentIndex: 0 })}
+			</tbody>
 		</table>
 	);
-}
+});
+
+export default ProjectTable;

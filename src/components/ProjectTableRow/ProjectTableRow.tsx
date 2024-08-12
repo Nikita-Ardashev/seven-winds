@@ -1,4 +1,4 @@
-import { HTMLInputTypeAttribute, useState } from 'react';
+import { HTMLInputTypeAttribute, useEffect, useState } from 'react';
 import './ProjectTableRow.style.sass';
 import FileIcon from '@img/file.svg';
 import TrashIcon from '@img/trash.svg';
@@ -8,66 +8,74 @@ import { IRow, ITree } from '@/model/types';
 interface IProjectTableRow {
 	level: number;
 	row: ITree;
+	parentIndex: number;
+	childIndex: number;
 }
 
-interface rowData extends Partial<IRow> {
+interface newRowData extends Partial<IRow> {
 	[key: string]: string | number | undefined;
 }
 
-export default function ProjectTableRow({ row, level }: IProjectTableRow) {
+export default function ProjectTableRow({
+	row,
+	level,
+	parentIndex,
+	childIndex,
+}: IProjectTableRow) {
 	const tree = EntityTree;
-	const [rowData, setRowData] = useState<ITree>(row);
-	const [isEditable, setIsEditable] = useState<boolean>(row.isNowCreate ?? false);
+	const [isEditable, setIsEditable] = useState<boolean>(false);
+
 	const changeRow = () => {
 		tree.setIsNowEdited(true);
 		setIsEditable(true);
-	};
-	const notChangeRow = () => {
-		tree.setIsNowEdited(false);
-		setIsEditable(false);
-	};
-	if (isEditable) {
 		window.onkeyup = (e) => {
 			if (e.key === 'Enter') {
 				if (row.isNowCreate) {
-					tree.saveRow(rowData);
-					notChangeRow();
-					return;
+					tree.saveRow(row);
+				} else {
+					tree.updateRow(row);
 				}
-				tree.updateRow(rowData);
 				notChangeRow();
+				return;
 			}
 			if (e.key === 'Escape') {
+				if (row.isNowCreate) tree.deleteRow(row);
 				notChangeRow();
 				return;
 			}
 		};
-	} else {
-		window.onkeyup = null;
-	}
-
-	const createRow = () => {
-		if (tree.getIsNowEdited || isEditable) return;
-		tree.setIsNowEdited(true);
-		tree.addRow(rowData);
 	};
 
-	const deleteRow = () => {
+	useEffect(() => {
+		row.isNowCreate && changeRow();
+	}, []);
+
+	const notChangeRow = () => {
+		tree.setIsNowEdited(false);
+		setIsEditable(false);
+		window.onkeyup = null;
+	};
+
+	const createRow = (e: React.MouseEvent<HTMLButtonElement>) => {
+		e.currentTarget.blur();
+		if (tree.getIsNowEdited || isEditable) return;
+		tree.setIsNowEdited(true);
+		tree.addRow(row);
+	};
+
+	const deleteRow = (e: React.MouseEvent<HTMLButtonElement>) => {
+		e.currentTarget.blur();
 		if (isEditable) return;
 		tree.deleteRow(row);
 	};
 
 	const changeField = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const t = e.currentTarget;
-		const rowField = t.dataset.rowField;
-		if (rowField === undefined) return;
-		const rowData: rowData = {};
+		const rowField = t.name;
+		const rowData: newRowData = {};
 		rowData[rowField] =
 			(t.type as HTMLInputTypeAttribute) === 'number' ? Number(t.value) : t.value;
-		setRowData((v) => {
-			const newV = { ...v, ...rowData } as ITree;
-			return newV;
-		});
+		tree.changeRow(row, rowData);
 	};
 
 	const inputProps = {
@@ -76,12 +84,18 @@ export default function ProjectTableRow({ row, level }: IProjectTableRow) {
 		onDoubleClick: changeRow,
 		readOnly: !isEditable,
 	};
-
+	const maxHeightLine = 60 * (parentIndex + childIndex + 1);
 	return (
 		<tr className="table-tr">
 			<td className="table-tr__level" style={{ paddingLeft: level * 20 + 12 }}>
 				{level !== 0 && (
-					<span className="level-lines" style={{ left: level * 20 + 4 }}></span>
+					<span
+						className="level-lines"
+						style={{
+							left: level * 20 + 4,
+							height: maxHeightLine === 0 ? 60 : maxHeightLine,
+						}}
+					></span>
 				)}
 				<div className={isEditable ? 'no-active' : ''}>
 					<button type="button" className="table-tr__file" onClick={createRow}>
@@ -97,35 +111,27 @@ export default function ProjectTableRow({ row, level }: IProjectTableRow) {
 					{...inputProps}
 					type="text"
 					maxLength={128}
-					data-row-field="rowName"
+					name="rowName"
 					defaultValue={row.rowName}
 				/>
 			</td>
 			<td>
-				<input
-					{...inputProps}
-					data-row-field="mainCosts"
-					defaultValue={row.mainCosts}
-				/>
+				<input {...inputProps} name="mainCosts" defaultValue={row.mainCosts} />
+			</td>
+			<td>
+				<input {...inputProps} name="overheads" defaultValue={row.overheads} />
 			</td>
 			<td>
 				<input
 					{...inputProps}
-					data-row-field="overheads"
-					defaultValue={row.overheads}
-				/>
-			</td>
-			<td>
-				<input
-					{...inputProps}
-					data-row-field="equipmentCosts"
+					name="equipmentCosts"
 					defaultValue={row.equipmentCosts}
 				/>
 			</td>
 			<td>
 				<input
 					{...inputProps}
-					data-row-field="estimatedProfit"
+					name="estimatedProfit"
 					defaultValue={row.estimatedProfit}
 				/>
 			</td>

@@ -1,5 +1,11 @@
-import { createRowInEntity, deleteRow, updateRow } from '@/model/api.service';
 import {
+	fetchCreateRowInEntity,
+	fetchDeleteRow,
+	fetchUpdateRow,
+} from '@/model/api.service';
+import { IChangeRow } from '@/model/types';
+import {
+	applySnapshot,
 	cast,
 	destroy,
 	flow,
@@ -57,6 +63,24 @@ export const modelEntityTree = types
 		get getIsNowEdited() {
 			return self.isNowEdited;
 		},
+		getTreeRowById(id: number) {
+			const findRow = (
+				tree: typeof self.tree,
+				id: number,
+			): Instance<typeof modelTree> | null => {
+				for (const node of tree) {
+					if (node.id === id) {
+						return node;
+					}
+					const foundChild = findRow(node.child, id);
+					if (foundChild !== null) {
+						return foundChild;
+					}
+				}
+				return null;
+			};
+			return findRow(self.tree, id);
+		},
 	}))
 	.actions((self) => ({
 		setTree(newTree: Instance<typeof modelTree>[]) {
@@ -86,14 +110,14 @@ export const modelEntityTree = types
 				total: 0,
 				isNowCreate: true,
 			};
-			parentRow.child.push(row);
+			parentRow.child.unshift(row);
 		},
 
 		saveRow: flow(function* (row: Instance<typeof modelTree>) {
 			try {
-				const r = yield createRowInEntity(row);
+				const r: IChangeRow = yield fetchCreateRowInEntity(row);
 				row.isNowCreate = false;
-				Object.assign(row, r.current);
+				applySnapshot(row, { ...row, ...r.current });
 			} catch (e) {
 				console.error(e);
 			}
@@ -101,15 +125,27 @@ export const modelEntityTree = types
 
 		updateRow: flow(function* (row: Instance<typeof modelTree>) {
 			try {
-				const r = yield updateRow(row);
-				Object.assign(row, r.current);
+				const r: IChangeRow = yield fetchUpdateRow(row);
+				applySnapshot(row, { ...row, ...r.current });
+				if (r.changed.length === 0) return;
+				for (const changed of r.changed) {
+					const rc = self.getTreeRowById(changed.id);
+					if (rc === null) continue;
+					applySnapshot(rc, { ...rc, ...changed });
+				}
 			} catch (e) {
 				console.error(e);
 			}
 		}),
 
 		deleteRow(row: Instance<typeof modelTree>) {
-			deleteRow(row.id);
+			row.id !== 0 && fetchDeleteRow(row.id);
 			destroy(row);
+		},
+		changeRow(
+			row: Instance<typeof modelTree>,
+			newDataRow: Partial<Instance<typeof modelTree>>,
+		) {
+			applySnapshot(row, { ...row, ...newDataRow });
 		},
 	}));

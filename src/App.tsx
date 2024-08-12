@@ -7,10 +7,10 @@ import { Tab } from './components/Tab';
 import ProjectTile from './components/ProjectTile/ProjectTile';
 import { ProjectTable } from './components/ProjectTable';
 import { useEffect } from 'react';
-import { getTreeRows } from './model/api.service';
+import { fetchGetTreeRows } from './model/api.service';
 import { EntityTree } from './store/treeRows';
 
-// createEntity()
+// fetchCreateEntity()
 // 	.then((r) => {
 // 		console.log(r);
 // 	})
@@ -35,11 +35,10 @@ export const PROJECTS: string[] = [
 ];
 
 export default function App() {
-	const tree = EntityTree;
 	useEffect(() => {
-		getTreeRows()
+		fetchGetTreeRows()
 			.then((r) => {
-				tree.setTree(r);
+				EntityTree.setTree(r);
 			})
 			.catch((e) => console.error(e));
 	}, []);
@@ -57,8 +56,16 @@ export default function App() {
 				<div className="work-area__projects">
 					<div className="work-area__projects-search">
 						<div>
-							<input type="text" placeholder="Название проекта" />
-							<input type="text" placeholder="Аббревиатура" />
+							<input
+								type="text"
+								name="name-project"
+								placeholder="Название проекта"
+							/>
+							<input
+								type="text"
+								name="abbreviation"
+								placeholder="Аббревиатура"
+							/>
 						</div>
 						<button>
 							<img src={ArrowIcon} alt="Иконка стрелки" />
@@ -80,7 +87,7 @@ export default function App() {
 					<div className="work-area__project-tabs">
 						<Tab title="Строительно-монтажные работы" />
 					</div>
-					<ProjectTable />
+					<ProjectTable entityTree={EntityTree} />
 				</div>
 			</div>
 		</>
